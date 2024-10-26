@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { Kendaraan } from '../kendaraan/entities/kendaraan.entity';
 import { Transaksi } from './entities/transaksi.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class TransaksiService {
@@ -47,6 +48,28 @@ export class TransaksiService {
           throw new Error(`Jenis kendaraan '${kendaraan.jenis}' tidak valid.`);
       }
 
+      // Ambil data user dan cek role
+      const user = await this.entityManager.findOne(User, {
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new Error(`User dengan ID '${userId}' tidak ditemukan.`);
+      }
+
+      if (user.role === 'Pengendara') {
+        // Cek apakah saldo cukup
+        if (user.saldo < jumlah_transaksi) {
+          throw new Error('Saldo tidak mencukupi untuk melakukan transaksi.');
+        }
+
+        // Kurangi saldo user
+        user.saldo -= jumlah_transaksi;
+
+        // Simpan perubahan saldo ke database
+        await this.entityManager.save(User, user);
+      }
+
       // Fungsi untuk menghitung pembagian pendapatan
       const hitungPembagianPendapatan = (total: number) => {
         const developerProfit = total * 0.2;
@@ -63,6 +86,14 @@ export class TransaksiService {
       const pembagian_pendapatan = hitungPembagianPendapatan(jumlah_transaksi);
 
       const lokasi_parkir = 'Toko Sembako Murah';
+
+      // Jika user berperan sebagai Juru Parkir, tambahkan tukangParkirRevenue ke saldo
+      if (user.role === 'Juru Parkir') {
+        user.saldo += pembagian_pendapatan.tukangParkirRevenue;
+
+        // Simpan perubahan saldo ke database
+        await this.entityManager.save(User, user);
+      }
 
       // Membuat objek transaksi dan menyimpan ID kendaraan
       const transaksi = new Transaksi();

@@ -42,6 +42,11 @@ export class User {
   })
   role: string;
 
+  @Column({
+    type: 'int',
+  })
+  saldo: number;
+
   @OneToMany(() => Transaksi, (transaksi) => transaksi.userId)
   transaksi: Transaksi[];
 

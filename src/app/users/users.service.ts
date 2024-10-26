@@ -51,4 +51,10 @@ export class UsersService {
   async findAllUsers() {
     return this.entityManager.find(User);
   }
+
+  async findUserById(id: string) {
+    return this.entityManager.findOne(User, {
+      where: { id },
+    });
+  }
 }
