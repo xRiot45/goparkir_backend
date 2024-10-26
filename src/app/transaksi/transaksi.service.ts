@@ -48,27 +48,31 @@ export class TransaksiService {
           throw new Error(`Jenis kendaraan '${kendaraan.jenis}' tidak valid.`);
       }
 
-      // Ambil data user dan cek role
-      const user = await this.entityManager.findOne(User, {
+      // Ambil data user yang melakukan transaksi
+      const pengendara = await this.entityManager.findOne(User, {
         where: { id: userId },
       });
 
-      if (!user) {
+      if (!pengendara) {
         throw new Error(`User dengan ID '${userId}' tidak ditemukan.`);
       }
 
-      if (user.role === 'Pengendara') {
-        // Cek apakah saldo cukup
-        if (user.saldo < jumlah_transaksi) {
-          throw new Error('Saldo tidak mencukupi untuk melakukan transaksi.');
-        }
-
-        // Kurangi saldo user
-        user.saldo -= jumlah_transaksi;
-
-        // Simpan perubahan saldo ke database
-        await this.entityManager.save(User, user);
+      if (pengendara.role !== 'Pengendara') {
+        throw new Error(
+          'Hanya pengguna dengan role Pengendara yang dapat melakukan transaksi.',
+        );
       }
+
+      // Cek apakah saldo pengendara cukup
+      if (pengendara.saldo < jumlah_transaksi) {
+        throw new Error('Saldo tidak mencukupi untuk melakukan transaksi.');
+      }
+
+      // Kurangi saldo pengendara
+      pengendara.saldo -= jumlah_transaksi;
+
+      // Simpan perubahan saldo pengendara ke database
+      await this.entityManager.save(User, pengendara);
 
       // Fungsi untuk menghitung pembagian pendapatan
       const hitungPembagianPendapatan = (total: number) => {
@@ -87,15 +91,21 @@ export class TransaksiService {
 
       const lokasi_parkir = 'Toko Sembako Murah';
 
-      // Jika user berperan sebagai Juru Parkir, tambahkan tukangParkirRevenue ke saldo
-      if (user.role === 'Juru Parkir') {
-        user.saldo += pembagian_pendapatan.tukangParkirRevenue;
+      // Ambil data Juru Parkir dan tambahkan revenue 40%
+      const juruParkir = await this.entityManager.findOne(User, {
+        where: { role: 'Juru Parkir' },
+      });
 
-        // Simpan perubahan saldo ke database
-        await this.entityManager.save(User, user);
+      if (juruParkir) {
+        juruParkir.saldo += pembagian_pendapatan.tukangParkirRevenue;
+
+        // Simpan perubahan saldo Juru Parkir ke database
+        await this.entityManager.save(User, juruParkir);
+      } else {
+        console.warn('Juru Parkir tidak ditemukan. Revenue tidak ditambahkan.');
       }
 
-      // Membuat objek transaksi dan menyimpan ID kendaraan
+      // Membuat objek transaksi dan menyimpan data transaksi
       const transaksi = new Transaksi();
       transaksi.userId = userId;
       transaksi.kendaraanId = kendaraan; // Simpan objek kendaraan terkait
