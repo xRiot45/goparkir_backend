@@ -60,9 +60,9 @@ export class TransaksiService {
         );
       }
 
-      if (pengendara.role !== 'Pengendara') {
+      if (pengendara.role !== 'Juru Parkir') {
         throw new HttpException(
-          'Hanya pengguna dengan role Pengendara yang dapat melakukan transaksi.',
+          'Hanya pengguna dengan role juru parkir yang dapat melakukan transaksi.',
           400,
         );
       }
