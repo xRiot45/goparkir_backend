@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { Kendaraan } from '../kendaraan/entities/kendaraan.entity';
 import { Transaksi } from './entities/transaksi.entity';
@@ -54,18 +54,25 @@ export class TransaksiService {
       });
 
       if (!pengendara) {
-        throw new Error(`User dengan ID '${userId}' tidak ditemukan.`);
+        throw new HttpException(
+          `User dengan ID '${userId}' tidak ditemukan.`,
+          400,
+        );
       }
 
       if (pengendara.role !== 'Pengendara') {
-        throw new Error(
+        throw new HttpException(
           'Hanya pengguna dengan role Pengendara yang dapat melakukan transaksi.',
+          400,
         );
       }
 
       // Cek apakah saldo pengendara cukup
       if (pengendara.saldo < jumlah_transaksi) {
-        throw new Error('Saldo tidak mencukupi untuk melakukan transaksi.');
+        throw new HttpException(
+          'Saldo tidak mencukupi untuk melakukan transaksi.',
+          400,
+        );
       }
 
       // Kurangi saldo pengendara
@@ -121,6 +128,7 @@ export class TransaksiService {
 
       return savedTransaksi;
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       console.error('Terjadi kesalahan:', error.message);
       throw error;
     }
